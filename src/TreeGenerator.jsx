@@ -250,16 +250,16 @@ const TreeGenerator = () => {
     // Определяем позицию дерева
     const startX = width / 2;
     let startY;
-    
+
     const isMobile = window.innerWidth < 768;
-    
+
     if (isMobile) {
       startY = height; // Точно от низа на мобильной
     } else {
       // Десктопная версия - видимое дерево
       startY = height * 0.85; // 85% высоты экрана
     }
-    
+
     const initialAngle = -Math.PI / 2; // Растет вверх
     const initialLength = Math.min(width, height) * 0.35;
     const initialThickness = 12;
