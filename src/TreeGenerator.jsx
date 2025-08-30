@@ -4,6 +4,7 @@ const TreeGenerator = () => {
   const canvasRef = useRef(null);
   const [activeHelp, setActiveHelp] = useState(null);
   const [showNatureHelp, setShowNatureHelp] = useState(false);
+  const [canvasInitialized, setCanvasInitialized] = useState(false);
   const [settings, setSettings] = useState({
     depth: 7,
     branches: 2,
@@ -240,6 +241,8 @@ const TreeGenerator = () => {
     // Если canvas пустой, не рисуем
     if (width === 0 || height === 0) return;
 
+    console.log(`Drawing tree on canvas: ${width}x${height}`); // Добавим отладку
+
     // Градиентный фон
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, '#0f1419');
@@ -263,6 +266,8 @@ const TreeGenerator = () => {
     const initialAngle = -Math.PI / 2; // Растет вверх
     const initialLength = Math.min(width, height) * 0.35;
     const initialThickness = 12;
+
+    console.log(`Tree params: startX=${startX}, startY=${startY}, length=${initialLength}`); // Добавим отладку
 
     drawBranch(
       ctx,
@@ -306,6 +311,7 @@ const TreeGenerator = () => {
     setShowNatureHelp(false);
   };
 
+  // Основной эффект для инициализации и изменения размера canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -314,42 +320,54 @@ const TreeGenerator = () => {
       const container = canvas.parentElement;
       if (container) {
         const rect = container.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-        // Убедимся что canvas занимает всё пространство
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
-        drawTree(); // Перерисовываем при изменении размера
+        console.log(`Container size: ${rect.width}x${rect.height}`); // Отладка
+        
+        if (rect.width > 0 && rect.height > 0) {
+          canvas.width = rect.width;
+          canvas.height = rect.height;
+          canvas.style.width = rect.width + 'px';
+          canvas.style.height = rect.height + 'px';
+          setCanvasInitialized(true);
+          
+          // Небольшая задержка перед рисованием для стабильности
+          setTimeout(() => {
+            drawTree();
+          }, 10);
+        }
       }
     };
 
-    // Небольшая задержка для корректной инициализации
-    setTimeout(resizeCanvas, 100);
+    // Инициализация с задержкой
+    const initTimer = setTimeout(resizeCanvas, 100);
     
-    resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    return () => {
+      clearTimeout(initTimer);
+      window.removeEventListener('resize', resizeCanvas);
+    };
   }, [drawTree]);
 
+  // Эффект для перерисовки при изменении настроек
   useEffect(() => {
-    drawTree();
-  }, [drawTree]);
-
-  // Принудительная перерисовка для десктопа
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      drawTree();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, []);
+    if (canvasInitialized) {
+      const timer = setTimeout(() => {
+        drawTree();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [settings, canvasInitialized, drawTree]);
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Desktop Layout */}
       <div className="hidden md:flex h-screen w-full">
         {/* Canvas */}
-        <div className="flex-1 relative bg-black min-w-0">
-          <canvas ref={canvasRef} className="w-full h-full block" />
+        <div className="flex-1 relative bg-black min-w-0" style={{minWidth: '300px'}}>
+          <canvas 
+            ref={canvasRef} 
+            className="w-full h-full block" 
+            style={{display: 'block', width: '100%', height: '100%'}}
+          />
           
           <div className="absolute top-6 left-6 z-10">
             <h1 className="text-5xl font-thin text-white/95 tracking-wide">
@@ -367,6 +385,15 @@ const TreeGenerator = () => {
               ?
             </button>
           </div>
+
+          {/* Debug info - uncomment for debugging */}
+          {/* 
+          <div className="absolute bottom-4 left-4 text-xs text-gray-400 bg-black/50 p-2 rounded">
+            Canvas: {canvasRef.current?.width || 0}x{canvasRef.current?.height || 0}
+            <br />
+            Initialized: {canvasInitialized ? 'Yes' : 'No'}
+          </div>
+          */}
         </div>
 
         {/* Control Panel */}
